@@ -1,6 +1,6 @@
-# Pixi Lofi Foundation
+# Christmas Lofi Scene
 
-Design-agnostic PixiJS v8 foundation for lofi-style animations. Provides core utilities for building ambient visual experiences.
+A cozy, animated Christmas scene built with PixiJS v8. Features a decorated tree, falling snow, aurora borealis, and twinkling stars.
 
 ## Quick Start
 
@@ -9,9 +9,11 @@ npm install
 npm run dev
 ```
 
+Open http://localhost:5173 in your browser.
+
 ## Tech Stack
 
-- **PixiJS v8** - WebGL 2D rendering (100k+ particles at 60fps)
+- **PixiJS v8** - WebGL 2D rendering
 - **Vite** - Fast dev server and bundling
 - **simplex-noise** - Organic motion generation
 
@@ -19,175 +21,110 @@ npm run dev
 
 ```
 src/
-  main.js              # Entry point
+  main.js                 # Entry point, scene composition
   core/
-    App.js             # Application wrapper with lifecycle management
-  utils/
-    pool.js            # Object pooling for memory efficiency
-    noise.js           # Simplex noise with FBM and flow fields
-    math.js            # lerp, clamp, randomRange, etc.
-    color.js           # HSL conversion, palettes, color lerping
-  effects/
-    postprocess.js     # Vignette, grain, color grading
+    App.js                # Application wrapper with lifecycle
   scenes/
-    TestScene.js       # Example particle scene
-assets/
-  textures/            # Sprite sheets, images
-  noise/               # Pre-rendered grain textures
+    NightSky.js           # Gradient sky, twinkling stars, glowing moon
+    Aurora.js             # Northern lights with noise-based flow
+    SnowGround.js         # Rolling snowy hills with parallax
+    ChristmasTree.js      # Tree with lights, ornaments, star topper
+    SnowSystem.js         # Heavy snowfall particle system
+    MagicSparkles.js      # Floating magical sparkle particles
+  utils/
+    pool.js               # Object pooling for particles
+    noise.js              # Simplex noise utilities
+    math.js               # lerp, clamp, randomRange, etc.
+    color.js              # HSL conversion, Christmas color palette
+  effects/
+    postprocess.js        # Vignette, color grading
 ```
 
-## Core Concepts
+## Scene Components
 
-### App Lifecycle
+### NightSky
+- Three-color gradient background (deep night to midnight blue)
+- 180 twinkling stars with varying brightness and twinkle speeds
+- Glowing moon with layered halo effect
+
+### Aurora
+- 6 flowing bands of northern lights
+- Uses 3D FBM noise for organic wave motion
+- Colors: greens, teals, purples, pinks
+
+### ChristmasTree
+- Layered jagged pine silhouette
+- 90 twinkling colored lights (cycle on/off)
+- 40 ornaments with subtle swing animation
+- Glowing rotating star topper
+- Snow patches on branches
+
+### SnowSystem
+- 600 snowflakes with depth-based parallax
+- Wind that shifts direction over time
+- Noise-driven wobble for organic motion
+
+### MagicSparkles
+- 40 floating 4-pointed star particles
+- Drift lazily with noise-based motion
+- Fade in/out lifecycle
+
+## Customization
+
+Edit `src/main.js` to adjust:
 
 ```js
-import { createApp } from './core/App.js';
-
-const app = await createApp({
-  backgroundColor: 0x1a1a2e,
-  width: window.innerWidth,
-  height: window.innerHeight
+// Tree size and decorations
+const christmasTree = new ChristmasTree({
+  position: { x: 0.5, y: 0.88 },  // Normalized screen position
+  scale: 1.3,                      // Tree size multiplier
+  lightCount: 90,                  // Number of lights
+  ornamentCount: 40                // Number of ornaments
 });
 
-app.addScene(myScene);
-app.start();
-```
-
-### Scene Interface
-
-Scenes are objects with optional lifecycle methods:
-
-```js
-const myScene = {
-  onAdd(app) { },           // Called when added to app
-  update(delta, elapsed) { }, // Called each frame (delta in seconds)
-  onResize(width, height) { },
-  onDestroy() { }
-};
-```
-
-### Layer System
-
-App provides 5 rendering layers (back to front):
-- `app.layers.background` - Static backgrounds
-- `app.layers.scene` - Main scene content
-- `app.layers.particles` - Particle systems
-- `app.layers.effects` - Dynamic effects
-- `app.layers.overlay` - Post-processing overlays
-
-### Object Pooling
-
-For particle systems, always use pooling to avoid GC pressure:
-
-```js
-import { ObjectPool } from './utils/pool.js';
-
-const pool = new ObjectPool(
-  () => new Graphics().circle(0, 0, 1).fill(0xffffff),
-  1000 // pre-allocate
-);
-
-const particle = pool.acquire((p) => {
-  p.x = Math.random() * width;
-  p.y = 0;
+// Snow intensity
+const snow = new SnowSystem({
+  particleCount: 600,              // More = heavier snow
+  windStrength: 1.0                // Wind intensity
 });
 
-// When done:
-pool.release(particle);
-```
+// Aurora brightness
+const aurora = new Aurora({
+  bandCount: 6,                    // Number of aurora bands
+  intensity: 0.5                   // Brightness (0-1)
+});
 
-### Noise-Based Motion
-
-For organic, non-robotic movement:
-
-```js
-import { Noise } from './utils/noise.js';
-
-const noise = new Noise();
-
-// Single value
-const n = noise.get2D(x * 0.01, y * 0.01);
-
-// Layered FBM for natural complexity
-const fbm = noise.fbm2D(x, y, { octaves: 4, scale: 0.01 });
-
-// Animated flow field (use time as z-axis)
-const flow = noise.flowField(x, y, elapsed, 0.01, 0.1);
-particle.x += flow.x * delta;
-particle.y += flow.y * delta;
-```
-
-### Color Palettes
-
-Use HSL and weighted palettes for lofi aesthetic:
-
-```js
-import { palettes, pickFromPalette, hslToHex } from './utils/color.js';
-
-// Pre-defined palettes with weights (70% dominant, 20% secondary, 10% accent)
-const color = pickFromPalette(palettes.warmNight);
-
-// Custom muted colors
-const muted = hslToHex(220, 30, 25); // Low saturation, low lightness
-```
-
-### Post-Processing
-
-```js
-import { setupPostProcessing } from './effects/postprocess.js';
-
+// Post-processing
 setupPostProcessing(app, {
-  vignette: true,
-  vignetteOptions: { intensity: 0.5, radius: 0.4 },
-  colorGrading: true,
-  colorGradingOptions: { saturation: 0.85, contrast: 1.1 },
-  grain: false // CPU intensive, enable if needed
+  vignetteOptions: { intensity: 0.15, radius: 0.7 },
+  colorGradingOptions: { saturation: 1.0, contrast: 1.05 }
 });
 ```
 
-## Memory Management
+## Color Palette
 
-Critical for long-running animations:
+Christmas colors defined in `src/utils/color.js`:
 
-1. **Always pool particles** - Never create/destroy in hot loop
-2. **Use delta time** - `position += velocity * delta` for frame-rate independence
-3. **Clean up timers** - Use `app.setTimeout()` instead of raw `setTimeout()`
-4. **Monitor memory** - Check `window.app.pool.stats` in dev tools
+```js
+christmasColors.skyTop        // 0x0B0B1A - Deep night
+christmasColors.aurora        // [greens, teals, purples, pinks]
+christmasColors.treeDark      // 0x1B4332 - Dark pine
+christmasColors.snowWhite     // 0xF0F8FF - Blue-tinted white
+christmasColors.lightGold     // 0xFFD93D - Golden lights
+christmasColors.ornaments     // [red, gold, blue, green, pink, purple]
+christmasColors.starGold      // 0xFFF3BF - Star topper
+```
 
-## Performance Targets
+## Performance
 
-- 60fps sustained
-- 1+ hour runtime without memory growth
-- <2MB initial download
+- Targets 60fps sustained
+- Object pooling prevents GC pressure
+- ~1000 particles rendered efficiently
+- Delta-time based animation for frame-rate independence
 
-## Adding New Scenes
-
-1. Create `src/scenes/MyScene.js`
-2. Implement scene interface (onAdd, update, etc.)
-3. Import and add in `main.js`:
-   ```js
-   import { MyScene } from './scenes/MyScene.js';
-   app.addScene(new MyScene());
-   ```
-
-## Building for Production
+## Building
 
 ```bash
-npm run build  # Output in dist/
+npm run build    # Output in dist/
 npm run preview  # Preview production build
 ```
-
-## Extending This Foundation
-
-This repo is design-agnostic. To create a specific animation:
-
-1. Fork/copy this foundation
-2. Add your scene in `src/scenes/`
-3. Add custom assets to `assets/`
-4. Modify `main.js` to compose your scene
-
-Examples of what to build:
-- Snowglobe (enclosed scene, snow particles, glass effect)
-- Lofi room (window, rain, flickering lights)
-- Night sky (stars, shooting stars, aurora)
-- Abstract (flowing particles, geometric shapes)
